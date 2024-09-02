@@ -1,31 +1,87 @@
-# tests/test_llmlib.py
-import unittest
-from unittest.mock import patch, MagicMock
-from llmlib import LLMClient, LLMRequest, Provider, OpenAIModel, Message
+import pytest
+import os
+from llmlib import (
+    LLMClient,
+    Provider,
+    OpenAIModel,
+    AnthropicModel,
+    Message,
+    Role,
+    LLMResponse,
+    process_and_collect_stream,
+    print_stream,
+)
 
-class TestLLMLib(unittest.TestCase):
-    def setUp(self):
-        self.client = LLMClient(openai_api_key="fake-openai-key", anthropic_api_key="fake-anthropic-key")
 
-    @patch('openai.OpenAI')
-    def test_openai_generate(self, mock_openai):
-        mock_openai.return_value.chat.completions.create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="Test response"))],
-            model="gpt-3.5-turbo",
-            usage=MagicMock(model_dump=lambda: {"total_tokens": 10})
-        )
+@pytest.fixture
+def openai_client():
+    return LLMClient(
+        provider=Provider.OPENAI,
+        model=OpenAIModel.GPT_4O,
+        openai_key=os.environ.get("OPENAI_API_KEY"),
+    )
 
-        request = LLMRequest(
-            provider=Provider.OPENAI,
-            model=OpenAIModel.GPT_3_5_TURBO,
-            messages=[Message(role="user", content="Test message")]
-        )
 
-        response = self.client.generate(request)
+@pytest.fixture
+def anthropic_client():
+    return LLMClient(
+        provider=Provider.ANTHROPIC,
+        model=AnthropicModel.CLAUDE_3_5_SONNET,
+        anthropic_key=os.environ.get("ANTHROPIC_API_KEY"),
+    )
 
-        self.assertEqual(response.content, "Test response")
-        self.assertEqual(response.model, "gpt-3.5-turbo")
-        self.assertEqual(response.usage, {"total_tokens": 10})
 
-if __name__ == '__main__':
-    unittest.main()
+def test_chat_openai(openai_client):
+    messages = [Message(content="What is the capital of France?", role=Role.USER)]
+    response = openai_client.chat(messages)
+
+    assert isinstance(response, LLMResponse)
+    assert "Paris" in response.content
+    assert response.model.startswith("gpt-4o")
+    assert "total_tokens" in response.usage
+
+
+def test_chat_anthropic(anthropic_client):
+    messages = [Message(content="What is the capital of Japan?", role=Role.USER)]
+    response = anthropic_client.chat(messages)
+
+    assert isinstance(response, LLMResponse)
+    assert "Tokyo" in response.content
+    assert response.model.startswith("claude-3-5-sonnet")
+    assert "prompt_tokens" in response.usage
+    assert "completion_tokens" in response.usage
+
+
+def test_chat_stream_openai(openai_client):
+    messages = [Message(content="Count from 1 to 5.", role=Role.USER)]
+    stream = openai_client.chat_stream(messages)
+    result = process_and_collect_stream(stream)
+
+    assert all(str(i) in result for i in range(1, 6))
+
+
+def test_chat_stream_anthropic(anthropic_client):
+    messages = [Message(content="List the days of the week.", role=Role.USER)]
+    stream = anthropic_client.chat_stream(messages)
+    result = process_and_collect_stream(stream)
+
+    days = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ]
+    assert all(day in result for day in days)
+
+
+def test_print_stream(anthropic_client, capsys):
+    messages = [Message(content="Say 'Hello, World!'", role=Role.USER)]
+    stream = anthropic_client.chat_stream(messages)
+    result = print_stream(stream)
+    captured = capsys.readouterr()
+
+    assert "Hello, World!" in result
+    assert "Hello, World!" in captured.out

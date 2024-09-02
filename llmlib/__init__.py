@@ -2,4 +2,17 @@
 
 __version__ = "0.0.1"  # Update this manually when you release a new version
 
-from .core import LLMClient, LLMRequest, Provider, OpenAIModel, AnthropicModel, Message, LLMResponse
+
+# ruff: noqa: F401
+from .core import (
+    LLMClient,
+    Provider,
+    OpenAIModel,
+    AnthropicModel,
+    Model,
+    Role,
+    Message,
+    LLMResponse,
+    process_and_collect_stream,
+    print_stream,
+)
