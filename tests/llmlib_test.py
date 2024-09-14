@@ -94,7 +94,10 @@ def test_object_classification(anthropic_client):
     img_bird = encode_image_webp(Image.open("tests/bird.webp"))
     base_messages = [
         TextMessage(content="You are an image analyst", role=Role.SYSTEM),
-        TextMessage(content="Is this a dog, cat, or bird? Give a one word response.", role=Role.USER),
+        TextMessage(
+            content="Is this a dog, cat, or bird? Give a one word response. Do not include punctuation.",
+            role=Role.USER
+        ),
     ]
 
     response = anthropic_client.chat(base_messages + [ImageMessage(content=img_dog, role=Role.USER)])
