@@ -1,4 +1,4 @@
-.PHONY: install test typecheck lint fmt clean build publish all check
+.PHONY: install test typecheck lint fmt clean build publish all check test-verbose
 
 # Use python3 if available, otherwise fall back to python
 PYTHON := $(shell command -v python3 || command -v python)
@@ -16,6 +16,10 @@ install:
 
 # Run tests
 test:
+	$(PYTHON) -m pytest -n auto
+
+# Run tests
+test-verbose:
 	$(PYTHON) -m pytest
 
 # Run type checking
@@ -25,11 +29,9 @@ typecheck:
 # Run linter
 lint:
 	$(PYTHON) -m ruff check .
-	$(PYTHON) -m black . --check
 
 # Format code
 fmt:
-	$(PYTHON) -m black .
 	$(PYTHON) -m ruff check . --fix
 
 # Clean up build artifacts

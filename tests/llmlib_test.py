@@ -5,12 +5,15 @@ from llmlib import (
     Provider,
     OpenAIModel,
     AnthropicModel,
-    Message,
+    TextMessage,
+    ImageMessage,
     Role,
     LLMResponse,
     process_and_collect_stream,
     print_stream,
+    encode_image_webp,
 )
+from PIL import Image
 
 
 @pytest.fixture
@@ -32,7 +35,7 @@ def anthropic_client():
 
 
 def test_chat_openai(openai_client):
-    messages = [Message(content="What is the capital of France?", role=Role.USER)]
+    messages = [TextMessage(content="What is the capital of France?", role=Role.USER)]
     response = openai_client.chat(messages)
 
     assert isinstance(response, LLMResponse)
@@ -42,7 +45,7 @@ def test_chat_openai(openai_client):
 
 
 def test_chat_anthropic(anthropic_client):
-    messages = [Message(content="What is the capital of Japan?", role=Role.USER)]
+    messages = [TextMessage(content="What is the capital of Japan?", role=Role.USER)]
     response = anthropic_client.chat(messages)
 
     assert isinstance(response, LLMResponse)
@@ -53,7 +56,7 @@ def test_chat_anthropic(anthropic_client):
 
 
 def test_chat_stream_openai(openai_client):
-    messages = [Message(content="Count from 1 to 5.", role=Role.USER)]
+    messages = [TextMessage(content="Count from 1 to 5.", role=Role.USER)]
     stream = openai_client.chat_stream(messages)
     result = process_and_collect_stream(stream)
 
@@ -61,7 +64,7 @@ def test_chat_stream_openai(openai_client):
 
 
 def test_chat_stream_anthropic(anthropic_client):
-    messages = [Message(content="List the days of the week.", role=Role.USER)]
+    messages = [TextMessage(content="List the days of the week.", role=Role.USER)]
     stream = anthropic_client.chat_stream(messages)
     result = process_and_collect_stream(stream)
 
@@ -78,10 +81,30 @@ def test_chat_stream_anthropic(anthropic_client):
 
 
 def test_print_stream(anthropic_client, capsys):
-    messages = [Message(content="Say 'Hello, World!'", role=Role.USER)]
+    messages = [TextMessage(content="Say 'Hello, World!'", role=Role.USER)]
     stream = anthropic_client.chat_stream(messages)
     result = print_stream(stream)
     captured = capsys.readouterr()
 
     assert "Hello, World!" in result
     assert "Hello, World!" in captured.out
+
+def test_object_classification(anthropic_client):
+    img_dog = encode_image_webp(Image.open("tests/dog.webp"))
+    img_bird = encode_image_webp(Image.open("tests/bird.webp"))
+    base_messages = [
+        TextMessage(content="You are an image analyst", role=Role.SYSTEM),
+        TextMessage(
+            content="Is this a dog, cat, or bird? Give a one word response. Do not include punctuation.",
+            role=Role.USER
+        ),
+    ]
+
+    response = anthropic_client.chat(base_messages + [ImageMessage(content=img_dog, role=Role.USER)])
+    choice = response.content.lower().strip()
+    assert choice == "dog", f"Expected 'dog', got '{choice}'"
+
+    response = anthropic_client.chat(base_messages + [ImageMessage(content=img_bird, role=Role.USER)])
+    choice = response.content.lower().strip()
+    assert choice == "bird", f"Expected 'bird', got '{choice}'"
+

@@ -12,7 +12,12 @@ from .core import (
     Model,
     Role,
     Message,
+    TextMessage,
+    ImageMessage,
     LLMResponse,
     process_and_collect_stream,
     print_stream,
+)
+from .images import (
+    encode_image_webp
 )
