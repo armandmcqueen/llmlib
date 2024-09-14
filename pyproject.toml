@@ -19,6 +19,7 @@ dependencies = [
     "openai",
     "anthropic",
     "rich",
+    "Pillow>=10.4.0",
 ]
 dynamic = ["version"]
 
@@ -30,9 +31,7 @@ dev = [
     "mypy>=1.11.1",
     "flit>=3.9.0",
 ]
-image = [
-    "Pillow>=10.4.0",
-]
+
 
 [project.urls]
 Home = "https://github.com/armandmcqueen/llmlib"
@@ -44,3 +43,8 @@ name = "llmlib"
 
 [tool.flit.sdist]
 include = ["LICENSE"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest-xdist>=3.6.1",
+]

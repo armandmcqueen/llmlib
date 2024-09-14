@@ -368,7 +368,7 @@ if __name__ == "__main__":
 
     # Non-streaming image example
     example_image = Path(__file__).parent.parent / "tests/test.webp"
-    img_base64, _ = encode_image_webp(Image.open(example_image))
+    img_base64 = encode_image_webp(Image.open(example_image))
     output: LLMResponse = client.chat(
         messages=[
             TextMessage(content="You are very concise image analyst", role=Role.SYSTEM),

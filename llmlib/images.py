@@ -18,7 +18,7 @@ def display_image(image_path):
     subprocess.run(["open", image_path])
 
 
-def encode_image_webp(image: Image.Image, quality: int = 85) -> tuple[str, int]:
+def encode_image_webp(image: Image.Image, quality: int = 85) -> str:
     """
     Encode a Pillow image to base64 string in WebP format.
 
@@ -27,7 +27,7 @@ def encode_image_webp(image: Image.Image, quality: int = 85) -> tuple[str, int]:
         quality (int): WebP quality setting (0-100). Default is 85.
 
     Returns:
-        Tuple[str, int]: Base64 encoded string of the image in WebP format and its size in bytes.
+        str: Base64 encoded string of the image in WebP format
 
     Raises:
         ValueError: If the input is not a valid Pillow image or quality is out of range.
@@ -41,8 +41,7 @@ def encode_image_webp(image: Image.Image, quality: int = 85) -> tuple[str, int]:
     buffer = io.BytesIO()
     image.save(buffer, format="WebP", quality=quality)
     encoded = base64.b64encode(buffer.getvalue()).decode('utf-8')
-    size = len(buffer.getvalue())
-    return encoded, size
+    return encoded
 
 
 class FluxRatio(str, enum.Enum):
