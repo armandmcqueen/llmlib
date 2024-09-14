@@ -348,15 +348,17 @@ if __name__ == "__main__":
     import os
 
     client = LLMClient(
-        # provider=Provider.ANTHROPIC,
-        # model=AnthropicModel.CLAUDE_3_5_SONNET,
-        provider=Provider.OPENAI,
-        model=OpenAIModel.GPT_4O,
+        provider=Provider.ANTHROPIC,
+        model=AnthropicModel.CLAUDE_3_5_SONNET,
+        # provider=Provider.OPENAI,
+        # model=OpenAIModel.GPT_4O,
         openai_key=os.environ["OPENAI_API_KEY"],
         anthropic_key=os.environ["ANTHROPIC_API_KEY"],
     )
 
-    # # Non-streaming example
+    #############################################
+    ### Non-streaming example                 ###
+    #############################################
     # output: LLMResponse = client.chat(
     #     messages=[
     #         TextMessage(content="You are very concise, answering a question in one sentence.", role=Role.SYSTEM),
@@ -366,8 +368,10 @@ if __name__ == "__main__":
     # print(f"[{client.model_id}]")
     # print(output.content)
 
-    # Non-streaming image example
-    example_image = Path(__file__).parent.parent / "tests/test.webp"
+    #############################################
+    ### Non-streaming image example           ###
+    #############################################
+    example_image = Path(__file__).parent.parent / "tests/bird.webp"
     img_base64 = encode_image_webp(Image.open(example_image))
     output: LLMResponse = client.chat(
         messages=[
@@ -380,13 +384,17 @@ if __name__ == "__main__":
     print(output.content)
     print(output.usage)
 
-    # Streaming example
+    #############################################
+    ### Streaming example                     ###
+    #############################################
     # for chunk in client.chat_stream(
     #         messages=[TextMessage(content="How can I solve tic-tac-toe in Python?", role=Role.USER)]
     # ):
     #     print(chunk, end="", flush=True)
 
-    # Streaming and collecting output
+    #############################################
+    ### Streaming and collecting output       ###
+    #############################################
     # stream = client.chat_stream(
     #     messages=[
     #         TextMessage(
