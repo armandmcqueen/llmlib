@@ -25,11 +25,9 @@ typecheck:
 # Run linter
 lint:
 	$(PYTHON) -m ruff check .
-	$(PYTHON) -m black . --check
 
 # Format code
 fmt:
-	$(PYTHON) -m black .
 	$(PYTHON) -m ruff check . --fix
 
 # Clean up build artifacts

@@ -1,11 +1,16 @@
 from enum import Enum
-from typing import Optional, Generator, Union, Iterable, Callable, cast, TypedDict
+from typing import Optional, Generator, Union, Iterable, Callable, cast, TypedDict, Literal
+from PIL import Image
+from abc import ABC
+from pathlib import Path
 
 from pydantic import BaseModel
 from typing_extensions import TypeAlias
 import openai
 from anthropic import Anthropic
 import anthropic
+
+from llmlib.images import encode_image_webp
 
 
 class StrEnum(str, Enum):
@@ -44,15 +49,25 @@ class Role(StrEnum):
     ASSISTANT = "assistant"
 
 
-class Message(BaseModel):
+class Message(BaseModel, ABC):
     content: str
+    role: Role
+
+
+class TextMessage(Message):
+    content: str
+    role: Role
+
+
+class ImageMessage(Message):
+    content: str  # base64 encoded webp
     role: Role
 
 
 class LLMResponse(BaseModel):
     content: str
     model: str
-    usage: dict
+    usage: dict  # TODO: Type this properly
 
 
 _OpenAiChatCompletionMessageParam: TypeAlias = Union[
@@ -65,7 +80,7 @@ _OpenAiChatCompletionMessageParam: TypeAlias = Union[
 
 
 def _convert_messages_to_openai_types(
-    messages: list[Message],
+        messages: list[Message],
 ) -> list[_OpenAiChatCompletionMessageParam]:
     o: list[_OpenAiChatCompletionMessageParam] = []
     for m in messages:
@@ -93,7 +108,7 @@ def _convert_messages_to_openai_types(
 
 
 def _anthropic_extract_system_prompt(
-    messages: list[Message],
+        messages: list[Message],
 ) -> str | anthropic.NotGiven:
     # Confirm there is one or zero system messages
     system_messages = [m for m in messages if m.role == Role.SYSTEM]
@@ -113,31 +128,57 @@ def _anthropic_filter_system_messages(messages: list[Message]) -> list[Message]:
 
 
 def _anthropic_convert_messages_to_typed_dicts(
-    messages: list[Message],
+        messages: list[Message],
 ) -> list[anthropic.types.message_param.MessageParam]:
     o: list[anthropic.types.message_param.MessageParam] = []
+    # First, we need to iterate over the messages and collect contiguous assistant and user message
+    # so we can combine them. We must also validate that there are no system messages and that
+    # we always alternate between assistant and user messages.
+    # [msg1, msg2, msg3, msg4, msg5] -> [[msg1, msg2], [msg3], [msg4, msg5]]
+    contiguous_messages = []
+    current_messages = []
+    current_role = messages[0].role.USER
+
     for m in messages:
         if m.role == Role.SYSTEM:
             raise ValueError("System messages are not supported in Anthropic")
-        elif m.role == Role.USER:
-            o.append(
-                anthropic.types.message_param.MessageParam(
-                    role="user", content=m.content
+
+        # Check if we are switching roles
+        if m.role != current_role:
+            contiguous_messages.append(current_messages)
+            current_messages = []
+            current_role = m.role
+
+        current_messages.append(m)
+
+    contiguous_messages.append(current_messages)
+
+    for cm in contiguous_messages:
+        role: Literal["user", "assistant"] = "user" if cm[0].role == Role.USER else "assistant"
+        content = []
+        for m in cm:
+            if isinstance(m, TextMessage):
+                content.append({"type": "text", "text": m.content})
+            elif isinstance(m, ImageMessage):
+                content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/webp",
+                            "data": m.content
+                        }
+                    }
                 )
-            )
-        elif m.role == Role.ASSISTANT:
-            o.append(
-                anthropic.types.message_param.MessageParam(
-                    role="assistant", content=m.content
-                )
-            )
-        else:
-            raise ValueError(f"Unsupported role: {m.role}")
+            else:
+                raise ValueError(f"Unsupported message type: {m}")
+        o.append(anthropic.types.message_param.MessageParam(role=role, content=content))
+
     return o
 
 
 def _anthropic_filter_and_convert_messages_to_typed_dicts(
-    messages: list[Message],
+        messages: list[Message],
 ) -> list[anthropic.types.message_param.MessageParam]:
     return _anthropic_convert_messages_to_typed_dicts(
         _anthropic_filter_system_messages(messages)
@@ -146,12 +187,12 @@ def _anthropic_filter_and_convert_messages_to_typed_dicts(
 
 class LLMClient:
     def __init__(
-        self,
-        provider: Provider,
-        model: Model,
-        openai_key: Optional[str] = None,
-        anthropic_key: Optional[str] = None,
-        anthropic_max_tokens: int = 8192,
+            self,
+            provider: Provider,
+            model: Model,
+            openai_key: Optional[str] = None,
+            anthropic_key: Optional[str] = None,
+            anthropic_max_tokens: int = 8192,
     ):
         self.provider = provider
         self.model = model
@@ -180,15 +221,19 @@ class LLMClient:
             if self.openai_client is None:
                 raise ValueError("OpenAI client is not initialized")
 
+            for m in messages:
+                if isinstance(m, ImageMessage):
+                    raise ValueError("Image messages are not supported in OpenAI")
+
             openai_response = self.openai_client.chat.completions.create(
                 model=self.model,
                 messages=_convert_messages_to_openai_types(messages),
             )
             content_response = openai_response.choices[0].message.content
             if (
-                content_response is None
-                or openai_response.model is None
-                or openai_response.usage is None
+                    content_response is None
+                    or openai_response.model is None
+                    or openai_response.usage is None
             ):
                 raise ValueError("Invalid response from OpenAI")
             return LLMResponse(
@@ -211,9 +256,9 @@ class LLMClient:
             )
             content_response = anthropic_response.content[0].text  # type: ignore
             if (
-                content_response is None
-                or anthropic_response.model is None
-                or anthropic_response.usage is None
+                    content_response is None
+                    or anthropic_response.model is None
+                    or anthropic_response.usage is None
             ):
                 raise ValueError("Invalid response from Anthropic")
             if anthropic_response.content[0].type == "tool_result":
@@ -229,7 +274,7 @@ class LLMClient:
                     "prompt_tokens": anthropic_response.usage.input_tokens,
                     "completion_tokens": anthropic_response.usage.output_tokens,
                     "total_tokens": anthropic_response.usage.input_tokens
-                    + anthropic_response.usage.output_tokens,
+                                    + anthropic_response.usage.output_tokens,
                 },
             )
 
@@ -251,20 +296,20 @@ class LLMClient:
             if self.anthropic_client is None:
                 raise ValueError("Anthropic client is not initialized")
             with self.anthropic_client.messages.stream(  # type: ignore
-                model=self.model,
-                messages=_anthropic_filter_and_convert_messages_to_typed_dicts(
-                    messages
-                ),
-                max_tokens=self.anthropic_max_tokens,
-                system=_anthropic_extract_system_prompt(messages),
+                    model=self.model,
+                    messages=_anthropic_filter_and_convert_messages_to_typed_dicts(
+                        messages
+                    ),
+                    max_tokens=self.anthropic_max_tokens,
+                    system=_anthropic_extract_system_prompt(messages),
             ) as anthropic_stream:
                 for text in anthropic_stream.text_stream:
                     yield text
 
 
 def process_and_collect_stream(
-    stream: Iterable[str],
-    chunk_fn: Callable[[str], None] = lambda x: print(x, end="", flush=True),
+        stream: Iterable[str],
+        chunk_fn: Callable[[str], None] = lambda x: print(x, end="", flush=True),
 ) -> str:
     """
     Process a stream of text chunks, applying an optional function to each chunk,
@@ -299,39 +344,52 @@ def print_stream(stream: Iterable[str]) -> str:
 
 
 if __name__ == "__main__":
-
     # Example usage
     import os
 
     client = LLMClient(
-        provider=Provider.ANTHROPIC,
-        model=AnthropicModel.CLAUDE_3_5_SONNET,
-        # provider=Provider.OPENAI,
-        # model=OpenAIModel.GPT_4O,
+        # provider=Provider.ANTHROPIC,
+        # model=AnthropicModel.CLAUDE_3_5_SONNET,
+        provider=Provider.OPENAI,
+        model=OpenAIModel.GPT_4O,
         openai_key=os.environ["OPENAI_API_KEY"],
         anthropic_key=os.environ["ANTHROPIC_API_KEY"],
     )
 
-    # Non-streaming example
+    # # Non-streaming example
+    # output: LLMResponse = client.chat(
+    #     messages=[
+    #         TextMessage(content="You are very concise, answering a question in one sentence.", role=Role.SYSTEM),
+    #         TextMessage(content="What is the capital of South Africa?", role=Role.USER)
+    #     ]
+    # )
+    # print(f"[{client.model_id}]")
+    # print(output.content)
+
+    # Non-streaming image example
+    example_image = Path(__file__).parent.parent / "tests/test.webp"
+    img_base64, _ = encode_image_webp(Image.open(example_image))
     output: LLMResponse = client.chat(
         messages=[
-            Message(content="You are very concise, answering a question in one sentence.", role=Role.SYSTEM),
-            Message(content="What is the capital of South Africa?", role=Role.USER)
+            TextMessage(content="You are very concise image analyst", role=Role.SYSTEM),
+            TextMessage(content="Please describe this image", role=Role.USER),
+            ImageMessage(content=img_base64, role=Role.USER)
         ]
     )
     print(f"[{client.model_id}]")
     print(output.content)
+    print(output.usage)
 
     # Streaming example
     # for chunk in client.chat_stream(
-    #         messages=[Message(content="How can I solve tic-tac-toe in Python?", role=Role.USER)]
+    #         messages=[TextMessage(content="How can I solve tic-tac-toe in Python?", role=Role.USER)]
     # ):
     #     print(chunk, end="", flush=True)
 
     # Streaming and collecting output
     # stream = client.chat_stream(
     #     messages=[
-    #         Message(
+    #         TextMessage(
     #             content="What is the bash command to rollback a git commit? "
     #             "Please be extremely succinct, output only the bash "
     #             "command. Do not include any commentary. The output "
