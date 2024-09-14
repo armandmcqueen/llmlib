@@ -285,7 +285,7 @@ wheels = [
 
 [[package]]
 name = "llmlib-amq"
-version = "0.0.2"
+version = "0.0.3"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -306,6 +306,7 @@ dev = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "mypy" },
     { name = "pytest-xdist" },
 ]
 
@@ -324,7 +325,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest-xdist", specifier = ">=3.6.1" }]
+dev = [
+    { name = "mypy", specifier = ">=1.11.2" },
+    { name = "pytest-xdist", specifier = ">=3.6.1" },
+]
 
 [[package]]
 name = "markdown-it-py"

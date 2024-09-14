@@ -4,6 +4,7 @@ from PIL import Image
 from abc import ABC
 from pathlib import Path
 
+from anthropic.types import TextBlockParam, ImageBlockParam
 from pydantic import BaseModel
 from typing_extensions import TypeAlias
 import openai
@@ -135,8 +136,8 @@ def _anthropic_convert_messages_to_typed_dicts(
     # so we can combine them. We must also validate that there are no system messages and that
     # we always alternate between assistant and user messages.
     # [msg1, msg2, msg3, msg4, msg5] -> [[msg1, msg2], [msg3], [msg4, msg5]]
-    contiguous_messages = []
-    current_messages = []
+    contiguous_messages: list[list[Message]] = []
+    current_messages: list[Message] = []
     current_role = messages[0].role.USER
 
     for m in messages:
@@ -155,7 +156,7 @@ def _anthropic_convert_messages_to_typed_dicts(
 
     for cm in contiguous_messages:
         role: Literal["user", "assistant"] = "user" if cm[0].role == Role.USER else "assistant"
-        content = []
+        content: list[TextBlockParam | ImageBlockParam] = []
         for m in cm:
             if isinstance(m, TextMessage):
                 content.append({"type": "text", "text": m.content})
