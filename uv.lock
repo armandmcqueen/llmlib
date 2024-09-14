@@ -295,39 +295,34 @@ dependencies = [
     { name = "rich" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "black" },
     { name = "flit" },
     { name = "mypy" },
     { name = "pytest" },
-    { name = "ruff" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "mypy" },
     { name = "pytest-xdist" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "anthropic" },
-    { name = "black", marker = "extra == 'dev'", specifier = ">=24.8.0" },
-    { name = "flit", marker = "extra == 'dev'", specifier = ">=3.9.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.1" },
     { name = "openai" },
     { name = "pillow", specifier = ">=10.4.0" },
     { name = "pydantic" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.2" },
     { name = "rich" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.2" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "black", specifier = ">=24.8.0" },
+    { name = "flit", specifier = ">=3.9.0" },
+    { name = "mypy", specifier = ">=1.11.1" },
     { name = "mypy", specifier = ">=1.11.2" },
+    { name = "pytest", specifier = ">=8.3.2" },
     { name = "pytest-xdist", specifier = ">=3.6.1" },
+    { name = "ruff", specifier = ">=0.6.2" },
 ]
 
 [[package]]
