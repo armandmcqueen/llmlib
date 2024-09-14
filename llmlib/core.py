@@ -1,8 +1,6 @@
 from enum import Enum
 from typing import Optional, Generator, Union, Iterable, Callable, cast, TypedDict, Literal
-from PIL import Image
 from abc import ABC
-from pathlib import Path
 
 from anthropic.types import TextBlockParam, ImageBlockParam
 from pydantic import BaseModel
@@ -10,8 +8,6 @@ from typing_extensions import TypeAlias
 import openai
 from anthropic import Anthropic
 import anthropic
-
-from llmlib.images import encode_image_webp
 
 
 class StrEnum(str, Enum):
