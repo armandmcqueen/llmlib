@@ -1,6 +1,6 @@
 """A simple library for making requests to LLMs."""
 
-__version__ = "0.0.4"  # Update this manually when you release a new version
+__version__ = "0.0.5"  # Update this manually when you release a new version
 
 
 # ruff: noqa: F401
