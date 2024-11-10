@@ -21,7 +21,7 @@ from PIL import Image
 def openai_client():
     return LLMClient(
         provider=Provider.OPENAI,
-        model=OpenAIModel.GPT_4O,
+        model=OpenAIModel.GPT_4O_20240806,
         openai_key=os.environ.get("OPENAI_API_KEY"),
     )
 
@@ -133,3 +133,27 @@ def test_anthropic_models(model: AnthropicModel, max_tokens: int) -> None:
     assert response.model.startswith(model)
     assert "prompt_tokens" in response.usage
     assert "completion_tokens" in response.usage
+
+
+@pytest.mark.parametrize("model", [
+    OpenAIModel.GPT_3_5_TURBO,
+    OpenAIModel.GPT_4,
+    OpenAIModel.GPT_4O_20240806,
+    OpenAIModel.GPT_4O_MINI_20240718,
+    OpenAIModel.O1_PREVIEW_20240912,
+    OpenAIModel.O1_MINI_20240912,
+])
+def test_openai_models(model: OpenAIModel) -> None:
+    client = LLMClient(
+        provider=Provider.OPENAI,
+        model=model,
+        openai_key=os.environ.get("OPENAI_API_KEY"),
+    )
+
+    messages: list[Message] = [TextMessage(content="What is 2+2?", role=Role.USER)]
+    response = client.chat(messages)
+
+    assert isinstance(response, LLMResponse)
+    assert "4" in response.content
+    assert response.model.startswith(model)
+    assert "total_tokens" in response.usage

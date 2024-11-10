@@ -23,7 +23,10 @@ class Provider(StrEnum):
 class OpenAIModel(StrEnum):
     GPT_3_5_TURBO = "gpt-3.5-turbo"
     GPT_4 = "gpt-4"
-    GPT_4O = "gpt-4o"
+    GPT_4O_20240806 = "gpt-4o-2024-08-06"
+    GPT_4O_MINI_20240718 = "gpt-4o-mini-2024-07-18"
+    O1_PREVIEW_20240912 = "o1-preview-2024-09-12"
+    O1_MINI_20240912 = "o1-mini-2024-09-12"
 
 
 class AnthropicModel(StrEnum):
