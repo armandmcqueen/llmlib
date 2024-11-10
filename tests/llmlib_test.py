@@ -7,6 +7,7 @@ from llmlib import (
     AnthropicModel,
     TextMessage,
     ImageMessage,
+    Message,
     Role,
     LLMResponse,
     process_and_collect_stream,
@@ -29,13 +30,13 @@ def openai_client():
 def anthropic_client():
     return LLMClient(
         provider=Provider.ANTHROPIC,
-        model=AnthropicModel.CLAUDE_3_5_SONNET,
+        model=AnthropicModel.CLAUDE_3_5_SONNET_20241022,
         anthropic_key=os.environ.get("ANTHROPIC_API_KEY"),
     )
 
 
 def test_chat_openai(openai_client):
-    messages = [TextMessage(content="What is the capital of France?", role=Role.USER)]
+    messages: list[Message] = [TextMessage(content="What is the capital of France?", role=Role.USER)]
     response = openai_client.chat(messages)
 
     assert isinstance(response, LLMResponse)
@@ -108,3 +109,27 @@ def test_object_classification(anthropic_client):
     choice = response.content.lower().strip()
     assert choice == "bird", f"Expected 'bird', got '{choice}'"
 
+
+@pytest.mark.parametrize("model,max_tokens", [
+    (AnthropicModel.CLAUDE_3_OPUS, 4096),
+    (AnthropicModel.CLAUDE_3_SONNET, 4096),
+    (AnthropicModel.CLAUDE_3_5_SONNET_20240620, 8192),
+    (AnthropicModel.CLAUDE_3_5_SONNET_20241022, 8192),
+    (AnthropicModel.CLAUDE_3_5_HAIKU_20241022, 8192),
+])
+def test_anthropic_models(model: AnthropicModel, max_tokens: int) -> None:
+    client = LLMClient(
+        provider=Provider.ANTHROPIC,
+        model=model,
+        anthropic_key=os.environ.get("ANTHROPIC_API_KEY"),
+        anthropic_max_tokens=max_tokens,
+    )
+
+    messages: list[Message] = [TextMessage(content="What is 2+2?", role=Role.USER)]
+    response = client.chat(messages)
+
+    assert isinstance(response, LLMResponse)
+    assert "4" in response.content
+    assert response.model.startswith(model)
+    assert "prompt_tokens" in response.usage
+    assert "completion_tokens" in response.usage

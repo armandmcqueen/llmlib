@@ -29,7 +29,9 @@ class OpenAIModel(StrEnum):
 class AnthropicModel(StrEnum):
     CLAUDE_3_OPUS = "claude-3-opus-20240229"
     CLAUDE_3_SONNET = "claude-3-sonnet-20240229"
-    CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20240620"
+    CLAUDE_3_5_SONNET_20240620 = "claude-3-5-sonnet-20240620"
+    CLAUDE_3_5_SONNET_20241022 = "claude-3-5-sonnet-20241022"
+    CLAUDE_3_5_HAIKU_20241022 = "claude-3-5-haiku-20241022"
 
 
 Model = Union[OpenAIModel, AnthropicModel]
