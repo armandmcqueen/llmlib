@@ -24,7 +24,7 @@ import os
 
 client = LLMClient(
     provider=Provider.ANTHROPIC,
-    model=AnthropicModel.CLAUDE_3_5_SONNET,
+    model=AnthropicModel.CLAUDE_3_5_SONNET_20241022,
     # provider=Provider.OPENAI,
     # model=OpenAIModel.GPT_4O,
     openai_key=os.environ["OPENAI_API_KEY"],
